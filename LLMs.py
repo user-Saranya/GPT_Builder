@@ -14,56 +14,56 @@ from langchain_groq import ChatGroq
 
 # Google AI's Gemini model
 
-gemini_model = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key='AIzaSyA0EPLLOOXapt15VqMHTGRFs4XPjtqIRO8')
+gemini_model = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE-API-KEY)
 def gemini_response(prompt):
   response = gemini_model.invoke(prompt)
   return response
 
 # Anthropic model
 
-# claude_model = ChatAnthropic(model='claude-3-opus-20240229', api_key='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', temperature=0)
-# def claude_response(prompt):
-#   response = claude_model.invoke(prompt)
-#   return response.content
+claude_model = ChatAnthropic(model='claude-3-opus-20240229', api_key=ANTHROPIC-API-KEY, temperature=0)
+def claude_response(prompt):
+   response = claude_model.invoke(prompt)
+   return response.content
 
 # MistralAI model
 
-mistral_ai_model = ChatMistralAI(api_key='KeBsPL0HhInFJlpw9vtKw44wEArLJHhM')
+mistral_ai_model = ChatMistralAI(api_key=MISTRALAI-KEY)
 def mistral_ai_response(prompt):
   response = mistral_ai_model.invoke(prompt)
   return response
 
 # Groq LLaMA3 8b model
 
-llama3_8b_model = ChatGroq(temperature=0, groq_api_key="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", model_name="llama3-8b-8192")
+llama3_8b_model = ChatGroq(temperature=0, groq_api_key=GROQ-API-KEY, model_name="llama3-8b-8192")
 def llama3_8b_response(prompt):
   response = llama3_8b_model.invoke(prompt)
   return response
 
 # Groq Mixtral 8x7b model
 
-mixtral_8x7b_model = ChatGroq(temperature=0, groq_api_key="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", model_name="mixtral-8x7b-32768")
+mixtral_8x7b_model = ChatGroq(temperature=0, groq_api_key=GROQ-API-KEY, model_name="mixtral-8x7b-32768")
 def mixtral_8x7b_response(prompt):
   response = mixtral_8x7b_model.invoke(prompt)
   return response
 
 # Groq LLaMa3 70b model
 
-llama3_70b_model = ChatGroq(temperature=0, groq_api_key="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", model_name="llama3-70b-8192")
+llama3_70b_model = ChatGroq(temperature=0, groq_api_key=GROQ-API-KEY, model_name="llama3-70b-8192")
 def llama3_70b_response(prompt):
   response = llama3_70b_model.invoke(prompt)
   return response
 
 # Groq gemma 7b model
 
-gemma_7b_model = ChatGroq(temperature=0, groq_api_key="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", model_name="gemma-7b-it")
+gemma_7b_model = ChatGroq(temperature=0, groq_api_key=GROQ-API-KEY, model_name="gemma-7b-it")
 def gemma_7b_response(prompt):
   response = gemma_7b_model.invoke(prompt)
   print(response.content)
 
 model_functions = {
     "Google AI's Gemini": gemini_response,
-    # "Anthropic's Claude": claude_response,
+    "Anthropic's Claude": claude_response,
     "MistralAI": mistral_ai_response,
     "Groq LLaMA3 8b": llama3_8b_response,
     "Groq Mixtral 8x7b": mixtral_8x7b_response,
