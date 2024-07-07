@@ -9,7 +9,6 @@ Original file is located at
 
 !pip install gradio
 !pip install langchain-google-genai
-!pip install langchain-anthropic
 !pip install -U langchain-core langchain-mistralai
 !pip install langchain-groq
 
