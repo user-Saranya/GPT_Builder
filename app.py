@@ -12,7 +12,6 @@ Original file is located at
 !pip install langchain-anthropic
 !pip install -U langchain-core langchain-mistralai
 !pip install langchain-groq
-!pip install langchain-cohere
 
 from google.colab import drive
 drive.mount('/content/drive')
