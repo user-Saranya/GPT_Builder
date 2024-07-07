@@ -26,28 +26,172 @@ import llms
 importlib.reload(llms)
 
 import gradio as gr
+import json
+import os
 from llms import model_functions
 
-def compare_selected_models(prompt, model1_name, model2_name):
-    model1_response = model_functions[model1_name](prompt)
-    model2_response = model_functions[model2_name](prompt)
-    return model1_response, model2_response
+share_js = """
+function () {
+    const captureElement = document.querySelector('#share-region-annoy');
+    html2canvas(captureElement)
+        .then(canvas => {
+            canvas.style.display = 'none'
+            document.body.appendChild(canvas)
+            return canvas
+        })
+        .then(canvas => {
+            const image = canvas.toDataURL('image/png')
+            const a = document.createElement('a')
+            a.setAttribute('download', 'chatbot-arena.png')
+            a.setAttribute('href', image)
+            a.click()
+            canvas.remove()
+        });
+    return [];
+}
+"""
 
-model_names = list(model_functions.keys())
+# Initialize vote counts
+if not os.path.exists("votes.json"):
+    with open("votes.json", "w") as f:
+        json.dump({}, f)
 
-interface = gr.Interface(
-    fn=compare_selected_models,
-    inputs=[
-        gr.Textbox(lines=2, placeholder="Enter your prompt here..."),
-        gr.Dropdown(choices=model_names, label="Select First Model"),
-        gr.Dropdown(choices=model_names, label="Select Second Model")
-    ],
-    outputs=[
-        gr.Textbox(label="Model 1 Response"),
-        gr.Textbox(label="Model 2 Response")
-    ],
-    title="LLM Arena",
-    description="Select two models from the dropdown menus to compare their responses."
-)
+# Load vote counts
+def load_votes():
+    with open("votes.json", "r") as f:
+        return json.load(f)
 
-interface.launch()
+# Save vote counts
+def save_votes(votes):
+    with open("votes.json", "w") as f:
+        json.dump(votes, f)
+
+# Reset vote counts
+def reset_votes():
+    votes = {model: 0 for model in model_functions.keys()}
+    save_votes(votes)
+    return update_leaderboard()
+
+# Vote for a model
+def vote_model(model_name):
+    votes = load_votes()
+    if model_name in votes:
+        votes[model_name] += 1
+    else:
+        votes[model_name] = 1
+    save_votes(votes)
+    return update_leaderboard()
+
+# Vote for both models
+def vote_both_models(model1, model2):
+    votes = load_votes()
+    if model1 in votes:
+        votes[model1] += 1
+    else:
+        votes[model1] = 1
+    if model2 in votes:
+        votes[model2] += 1
+    else:
+        votes[model2] = 1
+    save_votes(votes)
+    return update_leaderboard()
+
+# Update leaderboard
+def update_leaderboard():
+    votes = load_votes()
+    leaderboard = sorted(votes.items(), key=lambda x: x[1], reverse=True)
+    leaderboard_str = "Model | Votes\n--- | ---\n"
+    for model, count in leaderboard:
+        leaderboard_str += f"{model} | {count}\n"
+    return leaderboard_str
+
+def activate_chat_buttons():
+    regenerate_btn = gr.Button(value="🔄  Regenerate", interactive=True, elem_id="regenerate_btn")
+    clear_btn = gr.ClearButton(elem_id="clear_btn", interactive=True)
+    vote_btn_model1 = gr.Button(value="Vote for Model 1", interactive=True)
+    vote_btn_model2 = gr.Button(value="Vote for Model 2", interactive=True)
+    vote_btn_both = gr.Button(value="Both Win", interactive=True)
+    return regenerate_btn, clear_btn, vote_btn_model1, vote_btn_model2, vote_btn_both
+
+def deactivate_chat_buttons():
+    regenerate_btn = gr.Button(value="🔄  Regenerate", interactive=False, elem_id="regenerate_btn")
+    clear_btn = gr.ClearButton(elem_id="clear_btn", interactive=False)
+    vote_btn_model1 = gr.Button(value="Vote for Model 1", interactive=False)
+    vote_btn_model2 = gr.Button(value="Vote for Model 2", interactive=False)
+    vote_btn_both = gr.Button(value="Both Win", interactive=False)
+    return regenerate_btn, clear_btn, vote_btn_model1, vote_btn_model2, vote_btn_both
+
+def handle_message(model_name, user_input, history):
+    response = model_functions[model_name](user_input)
+    history.append((user_input, response))
+    return history, gr.State(history)
+
+def regenerate_message(model_name, history):
+    if history:
+        user_input = history[-1][0]
+        response = model_functions[model_name](user_input)
+        history[-1] = (user_input, response)
+    return history, gr.State(history)
+
+def clear_chat():
+    return [], gr.State([])
+
+with gr.Blocks(title="Chatbot Arena", theme=gr.themes.Soft(secondary_hue=gr.themes.colors.sky)) as demo:
+    models = list(model_functions.keys())
+
+    with gr.Tabs():
+        with gr.TabItem("Arena"):
+            gr.Markdown("# Chatbot Arena\n\nChat with multiple models at the same time and compare their responses.")
+
+            with gr.Row():
+                model1 = gr.Dropdown(label="Select Model 1", choices=models, value=models[0])
+                model2 = gr.Dropdown(label="Select Model 2", choices=models, value=models[1])
+
+            with gr.Row():
+                with gr.Column():
+                    chat1 = gr.Chatbot(label="Model 1", elem_id="chatbot1", height=550, show_copy_button=True)
+                with gr.Column():
+                    chat2 = gr.Chatbot(label="Model 2", elem_id="chatbot2", height=550, show_copy_button=True)
+
+            with gr.Row():
+                textbox = gr.Textbox(show_label=False, placeholder="Enter your query and press ENTER", elem_id="input_box", scale=4)
+                send_btn = gr.Button(value="Send", variant="primary", scale=0)
+
+            with gr.Row() as button_row:
+                clear_btn = gr.ClearButton(value="🎲 New Round", elem_id="clear_btn", interactive=False, components=[chat1, chat2])
+                regenerate_btn = gr.Button(value="🔄 Regenerate", interactive=False, elem_id="regenerate_btn")
+
+            with gr.Column():
+                vote_btn_model1 = gr.Button(value="Vote for Model 1", interactive=False, elem_id="vote_btn_model1")
+                vote_btn_model2 = gr.Button(value="Vote for Model 2", interactive=False, elem_id="vote_btn_model2")
+                vote_btn_both = gr.Button(value="Both Win", interactive=False, elem_id="vote_btn_both")
+
+            textbox.submit(handle_message, [model1, textbox, chat1], [chat1, gr.State()]).then(
+                handle_message, [model2, textbox, chat2], [chat2, gr.State()]).then(
+                activate_chat_buttons, inputs=[], outputs=[regenerate_btn, clear_btn, vote_btn_model1, vote_btn_model2, vote_btn_both])
+
+            send_btn.click(handle_message, [model1, textbox, chat1], [chat1, gr.State()]).then(
+                handle_message, [model2, textbox, chat2], [chat2, gr.State()]).then(
+                activate_chat_buttons, inputs=[], outputs=[regenerate_btn, clear_btn, vote_btn_model1, vote_btn_model2, vote_btn_both])
+
+            regenerate_btn.click(regenerate_message, [model1, chat1], [chat1, gr.State()]).then(
+                regenerate_message, [model2, chat2], [chat2, gr.State()])
+
+            clear_btn.click(clear_chat, inputs=[], outputs=[chat1, gr.State()]).then(
+                clear_chat, inputs=[], outputs=[chat2, gr.State()]).then(
+                deactivate_chat_buttons, inputs=[], outputs=[regenerate_btn, clear_btn])
+
+            vote_btn_model1.click(vote_model, inputs=model1, outputs=[])
+            vote_btn_model2.click(vote_model, inputs=model2, outputs=[])
+            vote_btn_both.click(vote_both_models, inputs=[model1, model2], outputs=[])
+
+        with gr.TabItem("Leaderboard"):
+            gr.Markdown("## Leaderboard")
+            leaderboard_md = gr.Markdown(value=update_leaderboard(), elem_id="leaderboard")
+            demo.load(update_leaderboard, inputs=None, outputs=leaderboard_md, every=10)
+            reset_btn = gr.Button(value="Reset Votes")
+            reset_btn.click(reset_votes, inputs=[], outputs=leaderboard_md)
+
+if __name__ == "__main__":
+    demo.queue(default_concurrency_limit=10)
+    demo.launch()
